@@ -15,134 +15,84 @@
 <!-- 008 -->
 <style>
 <!-- 009 -->
-html, body {
-<!-- 010 -->
-    width: 100%;
-<!-- 011 -->
-    height: 100%;
-<!-- 012 -->
-    margin: 0;
-<!-- 013 -->
-    padding: 0;
-<!-- 014 -->
-    overflow: hidden;
-<!-- 015 -->
-    background: #10100e;
-<!-- 016 -->
-    touch-action: none;
-<!-- 017 -->
-}
-<!-- 018 -->
+html,
 body {
-<!-- 019 -->
-    position: fixed;
-<!-- 020 -->
-    inset: 0;
-<!-- 021 -->
-}
-<!-- 022 -->
-canvas {
-<!-- 023 -->
-    display: block;
-<!-- 024 -->
     width: 100%;
-<!-- 025 -->
     height: 100%;
-<!-- 026 -->
-    outline: none;
-<!-- 027 -->
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #10100e;
     touch-action: none;
-<!-- 028 -->
 }
-<!-- 029 -->
+<!-- 010 -->
+body {
+    position: fixed;
+    inset: 0;
+}
+<!-- 011 -->
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+    touch-action: none;
+}
+<!-- 012 -->
 #status {
-<!-- 030 -->
     position: fixed;
-<!-- 031 -->
     top: calc(env(safe-area-inset-top) + 12px);
-<!-- 032 -->
     left: 50%;
-<!-- 033 -->
     transform: translateX(-50%);
-<!-- 034 -->
     z-index: 10;
-<!-- 035 -->
     padding: 8px 14px;
-<!-- 036 -->
     border-radius: 20px;
-<!-- 037 -->
     background: rgba(0,0,0,0.55);
-<!-- 038 -->
     color: white;
-<!-- 039 -->
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-<!-- 040 -->
     font-size: 13px;
-<!-- 041 -->
     pointer-events: none;
-<!-- 042 -->
     white-space: nowrap;
-<!-- 043 -->
 }
-<!-- 044 -->
+<!-- 013 -->
 #hint {
-<!-- 045 -->
     position: fixed;
-<!-- 046 -->
     left: 50%;
-<!-- 047 -->
     bottom: calc(env(safe-area-inset-bottom) + 18px);
-<!-- 048 -->
     transform: translateX(-50%);
-<!-- 049 -->
     z-index: 10;
-<!-- 050 -->
     padding: 10px 16px;
-<!-- 051 -->
     border-radius: 22px;
-<!-- 052 -->
     background: rgba(0,0,0,0.48);
-<!-- 053 -->
-    color: rgba(255,255,255,0.9);
-<!-- 054 -->
+    color: white;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-<!-- 055 -->
     font-size: 14px;
-<!-- 056 -->
     pointer-events: none;
-<!-- 057 -->
     white-space: nowrap;
-<!-- 058 -->
 }
-<!-- 059 -->
+<!-- 014 -->
 </style>
-<!-- 060 -->
+<!-- 015 -->
 <script type="importmap">
-<!-- 061 -->
 {
-<!-- 062 -->
     "imports": {
-<!-- 063 -->
         "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.21.4/build/playcanvas.mjs"
-<!-- 064 -->
     }
-<!-- 065 -->
 }
-<!-- 066 -->
 </script>
-<!-- 067 -->
+<!-- 016 -->
 </head>
-<!-- 068 -->
+<!-- 017 -->
 <body>
-<!-- 069 -->
+<!-- 018 -->
 <div id="status">Загрузка 3D runtime…</div>
-<!-- 070 -->
+<!-- 019 -->
 <div id="hint">Тапни по светящемуся объекту</div>
-<!-- 071 -->
+<!-- 020 -->
 <canvas id="application"></canvas>
-<!-- 072 -->
-<script type="module" src="./main.js"></script>
-<!-- 073 -->
+<!-- 021 -->
+<script type="module" src="./src/main.js"></script>
+<!-- 022 -->
 </body>
-<!-- 074 -->
+<!-- 023 -->
 </html>
