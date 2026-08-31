@@ -1,60 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta
         name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
-    <title>Дерево, которое помнит</title>
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background: #202020;
-            touch-action: none;
-        }
-        #application {
-            display: block;
-            width: 100%;
-            height: 100%;
-            touch-action: none;
-        }
-        #status,
-        #hint {
-            position: fixed;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-            text-align: center;
-            pointer-events: none;
-        }
-        #status {
-            top: 18px;
-            padding: 8px 14px;
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.65);
-            font-size: 14px;
-        }
-        #hint {
-            bottom: 24px;
-            padding: 8px 14px;
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.55);
-            font-size: 13px;
-        }
-    </style>
+    <meta
+        name="theme-color"
+        content="#202020"
+    >
+    <title>Tree Memory</title>
 </head>
 <body>
-<canvas id="application"></canvas>
-<div id="status">Загрузка 3D runtime…</div>
-<div id="hint">Загрузка персонажа…</div>
-<script type="module" src="./src/main.js"></script>
+    <script
+        type="module"
+        src="./src/main.js"
+    ></script>
 </body>
 </html>
