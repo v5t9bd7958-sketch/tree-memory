@@ -1,6 +1,7 @@
 import {
     Application,
     Asset,
+    BoundingBox,
     Color,
     Entity,
     FILLMODE_FILL_WINDOW,
@@ -24,8 +25,8 @@ if (!status) {
 function setStatus(message, error = false) {
     status.textContent = message;
     status.style.background = error
-        ? "rgba(145, 25, 25, 0.94)"
-        : "rgba(0, 0, 0, 0.78)";
+        ? "rgba(145,25,25,.94)"
+        : "rgba(0,0,0,.78)";
 }
 
 function fail(stage, error) {
@@ -36,78 +37,140 @@ function fail(stage, error) {
             ? error.message
             : String(error);
 
-    setStatus(`ОШИБКА ${stage}: ${message}`, true);
+    setStatus(
+        `ОШИБКА ${stage}: ${message}`,
+        true
+    );
 }
 
 window.addEventListener("error", (event) => {
     if (event.error) {
-        fail("JAVASCRIPT", event.error);
+        fail(
+            "JAVASCRIPT",
+            event.error
+        );
     }
 });
 
-window.addEventListener("unhandledrejection", (event) => {
-    fail("PROMISE", event.reason);
-});
+window.addEventListener(
+    "unhandledrejection",
+    (event) => {
+        fail(
+            "PROMISE",
+            event.reason
+        );
+    }
+);
 
-let app = null;
-let camera = null;
-let character = null;
+let app;
+let camera;
+let character;
+
 let characterScale = 1;
+let characterHitBox = null;
+
+const CHARACTER_TARGET_SIZE = 2.4;
+
+const CAMERA_TARGET = new Vec3(
+    0,
+    CHARACTER_TARGET_SIZE * 0.42,
+    0
+);
 
 try {
-    setStatus("1/6 · запуск PlayCanvas…");
+    setStatus(
+        "1/6 · запуск PlayCanvas…"
+    );
 
-    app = new Application(canvas, {
-        graphicsDeviceOptions: {
-            antialias: true,
-            alpha: false
+    app = new Application(
+        canvas,
+        {
+            graphicsDeviceOptions: {
+                antialias: true,
+                alpha: false
+            }
         }
-    });
+    );
 
-    app.setCanvasFillMode(FILLMODE_FILL_WINDOW);
-    app.setCanvasResolution(RESOLUTION_AUTO);
+    app.setCanvasFillMode(
+        FILLMODE_FILL_WINDOW
+    );
+
+    app.setCanvasResolution(
+        RESOLUTION_AUTO
+    );
 } catch (error) {
-    fail("ENGINE INIT", error);
+    fail(
+        "ENGINE INIT",
+        error
+    );
+
     throw error;
 }
 
 try {
-    setStatus("2/6 · создание сцены…");
-
-    app.scene.ambientLight = new Color(
-        0.38,
-        0.38,
-        0.38
+    setStatus(
+        "2/6 · создание сцены…"
     );
 
-    camera = new Entity("Camera");
+    app.scene.ambientLight =
+        new Color(
+            0.38,
+            0.38,
+            0.38
+        );
 
-    camera.addComponent("camera", {
-        clearColor: new Color(
-            0.025,
-            0.035,
-            0.025
-        ),
-        fov: 45,
-        nearClip: 0.05,
-        farClip: 100
-    });
+    camera =
+        new Entity("Camera");
 
-    camera.setPosition(0, 1.5, 5);
+    camera.addComponent(
+        "camera",
+        {
+            clearColor:
+                new Color(
+                    0.025,
+                    0.035,
+                    0.025
+                ),
 
-    app.root.addChild(camera);
+            fov: 45,
 
-    const mainLight = new Entity("MainLight");
+            nearClip: 0.05,
 
-    mainLight.addComponent("light", {
-        type: "directional",
-        color: new Color(
-            1,
-            0.92,
-            0.78
-        ),
-        intensity: 2
-    });
+            farClip: 100
+        }
+    );
+
+    camera.setPosition(
+        0,
+        CAMERA_TARGET.y,
+        4.2
+    );
+
+    app.root.addChild(
+        camera
+    );
+
+    const mainLight =
+        new Entity(
+            "MainLight"
+        );
+
+    mainLight.addComponent(
+        "light",
+        {
+            type: "directional",
+
+            color:
+                new Color(
+                    1,
+                    0.92,
+                    0.78
+                ),
+
+            intensity: 2
+        }
+    );
 
     mainLight.setEulerAngles(
         35,
@@ -115,19 +178,30 @@ try {
         0
     );
 
-    app.root.addChild(mainLight);
+    app.root.addChild(
+        mainLight
+    );
 
-    const fillLight = new Entity("FillLight");
+    const fillLight =
+        new Entity(
+            "FillLight"
+        );
 
-    fillLight.addComponent("light", {
-        type: "directional",
-        color: new Color(
-            0.65,
-            0.75,
-            1
-        ),
-        intensity: 0.55
-    });
+    fillLight.addComponent(
+        "light",
+        {
+            type: "directional",
+
+            color:
+                new Color(
+                    0.65,
+                    0.75,
+                    1
+                ),
+
+            intensity: 0.55
+        }
+    );
 
     fillLight.setEulerAngles(
         -25,
@@ -135,13 +209,21 @@ try {
         0
     );
 
-    app.root.addChild(fillLight);
+    app.root.addChild(
+        fillLight
+    );
 
-    const ground = new Entity("Ground");
+    const ground =
+        new Entity(
+            "Ground"
+        );
 
-    ground.addComponent("render", {
-        type: "plane"
-    });
+    ground.addComponent(
+        "render",
+        {
+            type: "plane"
+        }
+    );
 
     ground.setLocalScale(
         8,
@@ -164,15 +246,46 @@ try {
     ground.render.material =
         groundMaterial;
 
-    app.root.addChild(ground);
+    app.root.addChild(
+        ground
+    );
 } catch (error) {
-    fail("SCENE", error);
+    fail(
+        "SCENE",
+        error
+    );
+
     throw error;
 }
 
-function getCharacterBounds(root) {
+function isFiniteBounds(box) {
+    if (!box) {
+        return false;
+    }
+
+    const min =
+        box.getMin();
+
+    const max =
+        box.getMax();
+
+    return [
+        min.x,
+        min.y,
+        min.z,
+        max.x,
+        max.y,
+        max.z
+    ].every(
+        Number.isFinite
+    );
+}
+
+function getStaticCharacterBounds(root) {
     const renderEntities =
-        root.findComponents("render");
+        root.findComponents(
+            "render"
+        );
 
     if (!renderEntities.length) {
         throw new Error(
@@ -180,120 +293,174 @@ function getCharacterBounds(root) {
         );
     }
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let minZ = Infinity;
+    const aggregate =
+        new BoundingBox(
+            new Vec3(
+                0,
+                0,
+                0
+            ),
+            new Vec3(
+                0,
+                0,
+                0
+            )
+        );
 
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    let maxZ = -Infinity;
+    let found = false;
 
-    for (const entity of renderEntities) {
+    for (
+        const entity
+        of renderEntities
+    ) {
         if (!entity.render) {
             continue;
         }
+
+        /*
+         * Для skinned-модели НЕ используем
+         * meshInstance.aabb на старте.
+         *
+         * Берём стабильный object-space
+         * mesh.aabb и трансформируем его
+         * узлом.
+         */
 
         for (
             const meshInstance
             of entity.render.meshInstances
         ) {
-            const aabb =
-                meshInstance.aabb;
+            const meshBounds =
+                meshInstance.mesh?.aabb;
 
-            const min =
-                aabb.getMin();
+            if (
+                !isFiniteBounds(
+                    meshBounds
+                )
+            ) {
+                continue;
+            }
 
-            const max =
-                aabb.getMax();
+            const worldTransform =
+                meshInstance.node
+                    ?.getWorldTransform();
 
-            minX = Math.min(
-                minX,
-                min.x
+            if (!worldTransform) {
+                continue;
+            }
+
+            const transformed =
+                new BoundingBox(
+                    new Vec3(
+                        0,
+                        0,
+                        0
+                    ),
+                    new Vec3(
+                        0,
+                        0,
+                        0
+                    )
+                );
+
+            transformed.setFromTransformedAabb(
+                meshBounds,
+                worldTransform
             );
 
-            minY = Math.min(
-                minY,
-                min.y
-            );
+            if (
+                !isFiniteBounds(
+                    transformed
+                )
+            ) {
+                continue;
+            }
 
-            minZ = Math.min(
-                minZ,
-                min.z
-            );
+            if (!found) {
+                aggregate.copy(
+                    transformed
+                );
 
-            maxX = Math.max(
-                maxX,
-                max.x
-            );
-
-            maxY = Math.max(
-                maxY,
-                max.y
-            );
-
-            maxZ = Math.max(
-                maxZ,
-                max.z
-            );
+                found = true;
+            } else {
+                aggregate.add(
+                    transformed
+                );
+            }
         }
     }
 
     if (
-        !Number.isFinite(minX) ||
-        !Number.isFinite(minY) ||
-        !Number.isFinite(minZ) ||
-        !Number.isFinite(maxX) ||
-        !Number.isFinite(maxY) ||
-        !Number.isFinite(maxZ)
+        !found ||
+        !isFiniteBounds(
+            aggregate
+        )
     ) {
         throw new Error(
-            "Не удалось определить bounds персонажа."
+            "Не удалось определить статические bounds GLB."
         );
     }
 
-    return {
-        min: new Vec3(
-            minX,
-            minY,
-            minZ
-        ),
-        max: new Vec3(
-            maxX,
-            maxY,
-            maxZ
-        ),
-        center: new Vec3(
-            (minX + maxX) * 0.5,
-            (minY + maxY) * 0.5,
-            (minZ + maxZ) * 0.5
-        ),
-        size: new Vec3(
-            maxX - minX,
-            maxY - minY,
-            maxZ - minZ
-        )
-    };
+    return aggregate;
 }
 
-function frameCharacter() {
-    if (!character || !camera) {
-        return;
-    }
+function configureCharacterCulling(
+    renderEntities
+) {
+    /*
+     * Безопасный object-space AABB
+     * для skinned персонажа.
+     *
+     * Это предотвращает преждевременный
+     * frustum culling до обновления костей.
+     */
 
-    const originalBounds =
-        getCharacterBounds(
-            character
+    const safetyBox =
+        new BoundingBox(
+            new Vec3(
+                0,
+                1.2,
+                0
+            ),
+            new Vec3(
+                2.2,
+                2.2,
+                2.2
+            )
+        );
+
+    for (
+        const entity
+        of renderEntities
+    ) {
+        if (entity.render) {
+            entity.render.customAabb =
+                safetyBox.clone();
+        }
+    }
+}
+
+function frameCharacter(
+    staticBounds
+) {
+    const size =
+        new Vec3(
+            staticBounds.halfExtents.x * 2,
+            staticBounds.halfExtents.y * 2,
+            staticBounds.halfExtents.z * 2
         );
 
     const largestDimension =
         Math.max(
-            originalBounds.size.x,
-            originalBounds.size.y,
-            originalBounds.size.z
+            size.x,
+            size.y,
+            size.z
         );
 
     if (
-        !Number.isFinite(largestDimension) ||
+        !Number.isFinite(
+            largestDimension
+        ) ||
         largestDimension <= 0
     ) {
         throw new Error(
@@ -301,10 +468,8 @@ function frameCharacter() {
         );
     }
 
-    const targetSize = 2.4;
-
     characterScale =
-        targetSize /
+        CHARACTER_TARGET_SIZE /
         largestDimension;
 
     character.setLocalScale(
@@ -313,44 +478,61 @@ function frameCharacter() {
         characterScale
     );
 
+    const center =
+        staticBounds.center;
+
     character.setLocalPosition(
-        -originalBounds.center.x *
+        -center.x *
             characterScale,
-        -originalBounds.center.y *
+
+        -center.y *
             characterScale,
-        -originalBounds.center.z *
+
+        -center.z *
             characterScale
     );
-
-    const bounds =
-        getCharacterBounds(
-            character
-        );
-
-    const center =
-        bounds.center;
-
-    const size =
-        Math.max(
-            bounds.size.x,
-            bounds.size.y,
-            bounds.size.z,
-            0.1
-        );
 
     const distance =
         Math.max(
             3.2,
-            size * 2.4
+            CHARACTER_TARGET_SIZE * 1.55
         );
 
     camera.setPosition(
-        center.x,
-        center.y + size * 0.08,
-        center.z + distance
+        CAMERA_TARGET.x,
+        CAMERA_TARGET.y,
+        CAMERA_TARGET.z +
+            distance
     );
 
-    camera.lookAt(center);
+    camera.lookAt(
+        CAMERA_TARGET
+    );
+
+    characterHitBox =
+        new BoundingBox(
+            new Vec3(
+                0,
+                0,
+                0
+            ),
+            new Vec3(
+                0,
+                0,
+                0
+            )
+        );
+
+    characterHitBox
+        .setFromTransformedAabb(
+            staticBounds,
+            character.getWorldTransform()
+        );
+
+    return {
+        size,
+        largestDimension
+    };
 }
 
 async function loadCharacter() {
@@ -382,19 +564,15 @@ async function loadCharacter() {
         const blob =
             await response.blob();
 
-        if (blob.size === 0) {
+        if (blob.size <= 0) {
             throw new Error(
                 "GLB-файл пустой."
             );
         }
 
         console.log(
-            "[Tree Memory] GLB:",
-            characterUrl
-        );
-
-        console.log(
-            "[Tree Memory] GLB bytes:",
+            "[Tree Memory] GLB",
+            characterUrl,
             blob.size
         );
 
@@ -407,29 +585,38 @@ async function loadCharacter() {
                 "Character",
                 "container",
                 {
-                    url: characterUrl
+                    url:
+                        characterUrl
                 }
             );
 
         const loadedAsset =
             await new Promise(
-                (resolve, reject) => {
+                (
+                    resolve,
+                    reject
+                ) => {
                     asset.once(
                         "load",
                         () => {
-                            resolve(asset);
+                            resolve(
+                                asset
+                            );
                         }
                     );
 
                     asset.once(
                         "error",
-                        (error) => {
-                            reject(error);
-                        }
+                        reject
                     );
 
-                    app.assets.add(asset);
-                    app.assets.load(asset);
+                    app.assets.add(
+                        asset
+                    );
+
+                    app.assets.load(
+                        asset
+                    );
                 }
             );
 
@@ -447,7 +634,7 @@ async function loadCharacter() {
 
         if (!character) {
             throw new Error(
-                "Не удалось создать персонажа."
+                "Не удалось создать Entity персонажа."
             );
         }
 
@@ -458,22 +645,36 @@ async function loadCharacter() {
             character
         );
 
-        setStatus(
-            "5/6 · масштабирование и камера…"
-        );
-
-        frameCharacter();
-
         const renderEntities =
             character.findComponents(
                 "render"
             );
 
-        if (!renderEntities.length) {
+        if (
+            !renderEntities.length
+        ) {
             throw new Error(
                 "У персонажа отсутствует render."
             );
         }
+
+        configureCharacterCulling(
+            renderEntities
+        );
+
+        setStatus(
+            "5/6 · безопасный расчёт bounds и камера…"
+        );
+
+        const staticBounds =
+            getStaticCharacterBounds(
+                character
+            );
+
+        const metrics =
+            frameCharacter(
+                staticBounds
+            );
 
         for (
             const entity
@@ -483,21 +684,41 @@ async function loadCharacter() {
                 continue;
             }
 
-            for (
-                const meshInstance
-                of entity.render.meshInstances
-            ) {
-                meshInstance.castShadow = true;
-                meshInstance.receiveShadow = true;
-            }
+            entity.render.castShadows =
+                true;
+
+            entity.render.receiveShadows =
+                true;
         }
 
-        setStatus(
-            "6/6 · ПЕРСОНАЖ ✓ · ТАП ПО ГЕРОЮ"
-        );
+        const animationCount =
+            loadedAsset.resource
+                .animations
+                ?.length ?? 0;
 
         console.log(
-            "[Tree Memory] CHARACTER READY"
+            "[Tree Memory] CHARACTER READY",
+            {
+                bytes:
+                    blob.size,
+
+                animationCount,
+
+                width:
+                    metrics.size.x,
+
+                height:
+                    metrics.size.y,
+
+                depth:
+                    metrics.size.z
+            }
+        );
+
+        setStatus(
+            animationCount > 0
+                ? `6/6 · ПЕРСОНАЖ ✓ · анимаций: ${animationCount}`
+                : "6/6 · ПЕРСОНАЖ ✓ · анимаций в GLB не найдено"
         );
     } catch (error) {
         fail(
@@ -513,8 +734,8 @@ function characterHit(
 ) {
     if (
         !character ||
-        !camera ||
-        !camera.camera
+        !camera?.camera ||
+        !characterHitBox
     ) {
         return false;
     }
@@ -530,10 +751,12 @@ function characterHit(
     }
 
     const x =
-        clientX - rect.left;
+        clientX -
+        rect.left;
 
     const y =
-        clientY - rect.top;
+        clientY -
+        rect.top;
 
     const near =
         camera.camera.screenToWorld(
@@ -561,111 +784,81 @@ function characterHit(
             direction
         );
 
-    const renderEntities =
-        character.findComponents(
-            "render"
+    return characterHitBox
+        .intersectsRay(
+            ray
         );
-
-    for (
-        const entity
-        of renderEntities
-    ) {
-        if (!entity.render) {
-            continue;
-        }
-
-        for (
-            const meshInstance
-            of entity.render.meshInstances
-        ) {
-            if (
-                meshInstance.aabb &&
-                meshInstance.aabb.intersectsRay(
-                    ray
-                )
-            ) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function characterReaction() {
-    if (!character) {
-        return;
-    }
-
-    setStatus(
-        "ГЕРОЙ НАЙДЕН ✓"
-    );
-
-    character.setLocalScale(
-        characterScale * 1.08,
-        characterScale * 1.08,
-        characterScale * 1.08
-    );
-
-    window.setTimeout(
-        () => {
-            if (!character) {
-                return;
-            }
-
-            character.setLocalScale(
-                characterScale,
-                characterScale,
-                characterScale
-            );
-        },
-        160
-    );
-
-    console.log(
-        "[Tree Memory] CHARACTER TAP"
-    );
 }
 
 canvas.addEventListener(
     "pointerup",
     (event) => {
         if (
-            event.pointerType !== "touch"
+            event.pointerType !==
+            "touch"
         ) {
             return;
         }
 
         if (
-            characterHit(
+            !characterHit(
                 event.clientX,
                 event.clientY
             )
         ) {
-            characterReaction();
+            return;
         }
+
+        setStatus(
+            "ГЕРОЙ НАЙДЕН ✓"
+        );
+
+        character.setLocalScale(
+            characterScale * 1.06,
+            characterScale * 1.06,
+            characterScale * 1.06
+        );
+
+        window.setTimeout(
+            () => {
+                if (!character) {
+                    return;
+                }
+
+                character.setLocalScale(
+                    characterScale,
+                    characterScale,
+                    characterScale
+                );
+            },
+            140
+        );
     },
     {
         passive: true
     }
 );
 
-window.addEventListener(
-    "resize",
-    () => {
-        try {
-            app.resizeCanvas();
+function resize() {
+    try {
+        app.resizeCanvas();
 
-            if (character) {
-                frameCharacter();
-            }
-        } catch (error) {
-            fail(
-                "RESIZE",
-                error
+        if (camera) {
+            camera.lookAt(
+                CAMERA_TARGET
             );
         }
-    },
+    } catch (error) {
+        fail(
+            "RESIZE",
+            error
+        );
+    }
+}
+
+window.addEventListener(
+    "resize",
+    resize,
     {
         passive: true
     }
@@ -675,20 +868,7 @@ window.addEventListener(
     "orientationchange",
     () => {
         window.setTimeout(
-            () => {
-                try {
-                    app.resizeCanvas();
-
-                    if (character) {
-                        frameCharacter();
-                    }
-                } catch (error) {
-                    fail(
-                        "ORIENTATION",
-                        error
-                    );
-                }
-            },
+            resize,
             100
         );
     },
@@ -703,6 +883,7 @@ try {
     );
 
     app.start();
+
     app.resizeCanvas();
 } catch (error) {
     fail(
