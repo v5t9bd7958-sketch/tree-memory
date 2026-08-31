@@ -1,17 +1,285 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
-  <title>Дерево, которое помнит</title>
-</head>
+const game = document.getElementById("game");
 
-<body>
-  <div id="game"></div>
+game.innerHTML = `
+<style>
+* {
+  box-sizing: border-box;
+}
 
-  <script type="module" src="/src/main.js"></script>
-</body>
-</html>
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #10100d;
+}
+
+#scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 70% 25%, #d6c79b 0%, transparent 18%),
+    linear-gradient(#34483b 0%, #1c2922 55%, #101410 100%);
+}
+
+/* Луна */
+.moon {
+  position: absolute;
+  width: 18vw;
+  height: 18vw;
+  max-width: 130px;
+  max-height: 130px;
+  border-radius: 50%;
+  background: #e7dfb8;
+  top: 8%;
+  right: 12%;
+  box-shadow: 0 0 60px rgba(231,223,184,.35);
+}
+
+/* Огромный ствол */
+.tree {
+  position: absolute;
+  width: 48vw;
+  min-width: 330px;
+  height: 115vh;
+  left: 50%;
+  bottom: -15vh;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse at 50% 20%, #70553c 0%, #4c3829 45%, #2c2119 100%);
+  border-radius: 45% 45% 8% 8%;
+  box-shadow: inset 20px 0 50px rgba(0,0,0,.3),
+              inset -20px 0 50px rgba(0,0,0,.25);
+}
+
+/* Ветка */
+.branch {
+  position: absolute;
+  height: 11vw;
+  min-height: 70px;
+  width: 85vw;
+  left: 7vw;
+  top: 52%;
+  transform: rotate(-7deg);
+  transform-origin: left center;
+  border-radius: 100px;
+  background: linear-gradient(#684b35, #3b291e);
+  box-shadow: 0 20px 30px rgba(0,0,0,.3);
+}
+
+/* Мох */
+.moss {
+  position: absolute;
+  width: 180px;
+  height: 45px;
+  border-radius: 50%;
+  background: #465f3e;
+  filter: blur(1px);
+}
+
+.moss.a {
+  left: 18%;
+  top: 50%;
+}
+
+.moss.b {
+  right: 17%;
+  top: 54%;
+}
+
+/* Герой */
+.hero {
+  position: absolute;
+  left: 28%;
+  top: 39%;
+  width: 54px;
+  height: 125px;
+  transform-origin: bottom center;
+  transition:
+    left .9s cubic-bezier(.2,.8,.2,1),
+    transform .4s ease;
+  z-index: 10;
+}
+
+.hero .head {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  left: 6px;
+  top: 0;
+  border-radius: 48% 48% 45% 45%;
+  background: #c9946d;
+  box-shadow: inset -6px -5px 0 rgba(0,0,0,.12);
+}
+
+.hero .body {
+  position: absolute;
+  width: 34px;
+  height: 55px;
+  left: 10px;
+  top: 39px;
+  border-radius: 15px 15px 9px 9px;
+  background: #596c62;
+}
+
+.hero .leg {
+  position: absolute;
+  width: 10px;
+  height: 42px;
+  top: 90px;
+  background: #292c2a;
+  border-radius: 8px;
+}
+
+.hero .leg.left {
+  left: 12px;
+}
+
+.hero .leg.right {
+  right: 12px;
+}
+
+.hero .arm {
+  position: absolute;
+  width: 9px;
+  height: 43px;
+  top: 43px;
+  background: #bd8965;
+  border-radius: 8px;
+  transform-origin: top center;
+}
+
+.hero .arm.left {
+  left: 3px;
+  transform: rotate(12deg);
+}
+
+.hero .arm.right {
+  right: 3px;
+  transform: rotate(-12deg);
+}
+
+/* Колокольчик */
+.bell {
+  position: absolute;
+  right: 19%;
+  top: 43%;
+  width: 38px;
+  height: 45px;
+  border-radius: 45% 45% 35% 35%;
+  background: #c5a24f;
+  box-shadow: 0 5px 12px rgba(0,0,0,.4);
+  z-index: 8;
+  cursor: pointer;
+}
+
+.bell::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #57451d;
+  bottom: -5px;
+  left: 15px;
+}
+
+.bell.active {
+  animation: bellShake .12s linear 5;
+}
+
+@keyframes bellShake {
+  0% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+  100% { transform: rotate(-8deg); }
+}
+
+/* подсказка */
+.hint {
+  position: absolute;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 20px;
+  background: rgba(0,0,0,.45);
+  color: #eee;
+  font: 14px system-ui;
+  opacity: .8;
+}
+
+/* глаза */
+.hero .eye {
+  position: absolute;
+  width: 5px;
+  height: 7px;
+  background: #211b17;
+  border-radius: 50%;
+  top: 17px;
+}
+
+.hero .eye.one {
+  left: 16px;
+}
+
+.hero .eye.two {
+  left: 27px;
+}
+</style>
+
+<div id="scene">
+
+  <div class="moon"></div>
+
+  <div class="tree"></div>
+
+  <div class="branch"></div>
+
+  <div class="moss a"></div>
+  <div class="moss b"></div>
+
+  <div class="bell" id="bell"></div>
+
+  <div class="hero" id="hero">
+    <div class="head">
+      <div class="eye one"></div>
+      <div class="eye two"></div>
+    </div>
+
+    <div class="body"></div>
+
+    <div class="arm left"></div>
+    <div class="arm right"></div>
+
+    <div class="leg left"></div>
+    <div class="leg right"></div>
+  </div>
+
+  <div class="hint">
+    Нажми на колокольчик
+  </div>
+
+</div>
+`;
+
+const hero = document.getElementById("hero");
+const bell = document.getElementById("bell");
+
+bell.addEventListener("click", () => {
+
+  hero.style.left = "63%";
+  hero.style.transform = "scaleX(1)";
+
+  setTimeout(() => {
+
+    bell.classList.add("active");
+
+    setTimeout(() => {
+      bell.classList.remove("active");
+    }, 700);
+
+  }, 900);
+
+});
