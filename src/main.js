@@ -4,6 +4,7 @@ import {
     Color,
     Entity,
     FILLMODE_FILL_WINDOW,
+    Ray,
     RESOLUTION_AUTO,
     StandardMaterial,
     Vec3
@@ -48,7 +49,10 @@ window.addEventListener("unhandledrejection", (event) => {
     fail("PROMISE", event.reason);
 });
 
-let app;
+let app = null;
+let camera = null;
+let character = null;
+let characterScale = 1;
 
 try {
     setStatus("1/6 · запуск PlayCanvas…");
@@ -66,10 +70,6 @@ try {
     fail("ENGINE INIT", error);
     throw error;
 }
-
-let camera;
-let character;
-let characterBounds = null;
 
 try {
     setStatus("2/6 · создание сцены…");
@@ -93,11 +93,7 @@ try {
         farClip: 100
     });
 
-    camera.setPosition(
-        0,
-        1.5,
-        5
-    );
+    camera.setPosition(0, 1.5, 5);
 
     app.root.addChild(camera);
 
@@ -174,13 +170,13 @@ try {
     throw error;
 }
 
-function collectCharacterBounds(root) {
+function getCharacterBounds(root) {
     const renderEntities =
         root.findComponents("render");
 
     if (!renderEntities.length) {
         throw new Error(
-            "В GLB не найдено ни одного render-компонента."
+            "В GLB не найден render-компонент."
         );
     }
 
@@ -197,19 +193,48 @@ function collectCharacterBounds(root) {
             continue;
         }
 
-        for (const meshInstance of entity.render.meshInstances) {
-            const aabb = meshInstance.aabb;
+        for (
+            const meshInstance
+            of entity.render.meshInstances
+        ) {
+            const aabb =
+                meshInstance.aabb;
 
-            const min = aabb.getMin();
-            const max = aabb.getMax();
+            const min =
+                aabb.getMin();
 
-            minX = Math.min(minX, min.x);
-            minY = Math.min(minY, min.y);
-            minZ = Math.min(minZ, min.z);
+            const max =
+                aabb.getMax();
 
-            maxX = Math.max(maxX, max.x);
-            maxY = Math.max(maxY, max.y);
-            maxZ = Math.max(maxZ, max.z);
+            minX = Math.min(
+                minX,
+                min.x
+            );
+
+            minY = Math.min(
+                minY,
+                min.y
+            );
+
+            minZ = Math.min(
+                minZ,
+                min.z
+            );
+
+            maxX = Math.max(
+                maxX,
+                max.x
+            );
+
+            maxY = Math.max(
+                maxY,
+                max.y
+            );
+
+            maxZ = Math.max(
+                maxZ,
+                max.z
+            );
         }
     }
 
@@ -222,42 +247,31 @@ function collectCharacterBounds(root) {
         !Number.isFinite(maxZ)
     ) {
         throw new Error(
-            "Не удалось определить размеры персонажа."
-        );
-    }
-
-    const center = new Vec3(
-        (minX + maxX) * 0.5,
-        (minY + maxY) * 0.5,
-        (minZ + maxZ) * 0.5
-    );
-
-    const size = new Vec3(
-        maxX - minX,
-        maxY - minY,
-        maxZ - minZ
-    );
-
-    const largestDimension =
-        Math.max(
-            size.x,
-            size.y,
-            size.z
-        );
-
-    if (
-        !Number.isFinite(largestDimension) ||
-        largestDimension <= 0
-    ) {
-        throw new Error(
-            "Размер персонажа некорректен."
+            "Не удалось определить bounds персонажа."
         );
     }
 
     return {
-        center,
-        size,
-        largestDimension
+        min: new Vec3(
+            minX,
+            minY,
+            minZ
+        ),
+        max: new Vec3(
+            maxX,
+            maxY,
+            maxZ
+        ),
+        center: new Vec3(
+            (minX + maxX) * 0.5,
+            (minY + maxY) * 0.5,
+            (minZ + maxZ) * 0.5
+        ),
+        size: new Vec3(
+            maxX - minX,
+            maxY - minY,
+            maxZ - minZ
+        )
     };
 }
 
@@ -266,44 +280,61 @@ function frameCharacter() {
         return;
     }
 
-    const bounds =
-        collectCharacterBounds(
+    const originalBounds =
+        getCharacterBounds(
             character
         );
 
-    characterBounds = bounds;
+    const largestDimension =
+        Math.max(
+            originalBounds.size.x,
+            originalBounds.size.y,
+            originalBounds.size.z
+        );
 
-    const targetHeight = 2.4;
+    if (
+        !Number.isFinite(largestDimension) ||
+        largestDimension <= 0
+    ) {
+        throw new Error(
+            "Некорректный размер GLB."
+        );
+    }
 
-    const scale =
-        targetHeight /
-        bounds.largestDimension;
+    const targetSize = 2.4;
+
+    characterScale =
+        targetSize /
+        largestDimension;
 
     character.setLocalScale(
-        scale,
-        scale,
-        scale
+        characterScale,
+        characterScale,
+        characterScale
     );
 
     character.setLocalPosition(
-        -bounds.center.x * scale,
-        -bounds.center.y * scale,
-        -bounds.center.z * scale
+        -originalBounds.center.x *
+            characterScale,
+        -originalBounds.center.y *
+            characterScale,
+        -originalBounds.center.z *
+            characterScale
     );
 
-    const finalBounds =
-        collectCharacterBounds(
+    const bounds =
+        getCharacterBounds(
             character
         );
 
     const center =
-        finalBounds.center;
+        bounds.center;
 
     const size =
         Math.max(
-            finalBounds.size.x,
-            finalBounds.size.y,
-            finalBounds.size.z,
+            bounds.size.x,
+            bounds.size.y,
+            bounds.size.z,
             0.1
         );
 
@@ -325,7 +356,7 @@ function frameCharacter() {
 async function loadCharacter() {
     try {
         setStatus(
-            "3/6 · загрузка персонажа…"
+            "3/6 · загрузка characterRIGGED.glb…"
         );
 
         const characterUrl =
@@ -351,7 +382,7 @@ async function loadCharacter() {
         const blob =
             await response.blob();
 
-        if (blob.size <= 0) {
+        if (blob.size === 0) {
             throw new Error(
                 "GLB-файл пустой."
             );
@@ -359,8 +390,11 @@ async function loadCharacter() {
 
         console.log(
             "[Tree Memory] GLB:",
-            characterUrl,
-            "bytes:",
+            characterUrl
+        );
+
+        console.log(
+            "[Tree Memory] GLB bytes:",
             blob.size
         );
 
@@ -377,17 +411,21 @@ async function loadCharacter() {
                 }
             );
 
-        const loadedCharacter =
+        const loadedAsset =
             await new Promise(
                 (resolve, reject) => {
                     asset.once(
                         "load",
-                        () => resolve(asset)
+                        () => {
+                            resolve(asset);
+                        }
                     );
 
                     asset.once(
                         "error",
-                        (error) => reject(error)
+                        (error) => {
+                            reject(error);
+                        }
                     );
 
                     app.assets.add(asset);
@@ -396,20 +434,20 @@ async function loadCharacter() {
             );
 
         if (
-            !loadedCharacter.resource
+            !loadedAsset.resource
         ) {
             throw new Error(
-                "PlayCanvas не создал resource из GLB."
+                "PlayCanvas не создал GLB resource."
             );
         }
 
         character =
-            loadedCharacter.resource
+            loadedAsset.resource
                 .instantiateRenderEntity();
 
         if (!character) {
             throw new Error(
-                "Не удалось создать Entity персонажа."
+                "Не удалось создать персонажа."
             );
         }
 
@@ -421,7 +459,7 @@ async function loadCharacter() {
         );
 
         setStatus(
-            "5/6 · настройка камеры и масштаба…"
+            "5/6 · масштабирование и камера…"
         );
 
         frameCharacter();
@@ -433,11 +471,14 @@ async function loadCharacter() {
 
         if (!renderEntities.length) {
             throw new Error(
-                "Персонаж создан, но render-компоненты отсутствуют."
+                "У персонажа отсутствует render."
             );
         }
 
-        for (const entity of renderEntities) {
+        for (
+            const entity
+            of renderEntities
+        ) {
             if (!entity.render) {
                 continue;
             }
@@ -452,7 +493,7 @@ async function loadCharacter() {
         }
 
         setStatus(
-            "6/6 · ПЕРСОНАЖ ✓ · ТАП ПО НЕМУ"
+            "6/6 · ПЕРСОНАЖ ✓ · ТАП ПО ГЕРОЮ"
         );
 
         console.log(
@@ -466,9 +507,9 @@ async function loadCharacter() {
     }
 }
 
-function findCharacterHit(
-    screenX,
-    screenY
+function characterHit(
+    clientX,
+    clientY
 ) {
     if (
         !character ||
@@ -489,19 +530,19 @@ function findCharacterHit(
     }
 
     const x =
-        screenX - rect.left;
+        clientX - rect.left;
 
     const y =
-        screenY - rect.top;
+        clientY - rect.top;
 
-    const worldNear =
+    const near =
         camera.camera.screenToWorld(
             x,
             y,
             0
         );
 
-    const worldFar =
+    const far =
         camera.camera.screenToWorld(
             x,
             y,
@@ -509,14 +550,14 @@ function findCharacterHit(
         );
 
     const direction =
-        worldFar
+        far
             .clone()
-            .sub(worldNear)
+            .sub(near)
             .normalize();
 
     const ray =
-        new pc.Ray(
-            worldNear,
+        new Ray(
+            near,
             direction
         );
 
@@ -551,21 +592,8 @@ function findCharacterHit(
     return false;
 }
 
-function handlePointerUp(event) {
-    if (
-        !character ||
-        event.pointerType !== "touch"
-    ) {
-        return;
-    }
-
-    const hit =
-        findCharacterHit(
-            event.clientX,
-            event.clientY
-        );
-
-    if (!hit) {
+function characterReaction() {
+    if (!character) {
         return;
     }
 
@@ -574,20 +602,22 @@ function handlePointerUp(event) {
     );
 
     character.setLocalScale(
-        1.08,
-        1.08,
-        1.08
+        characterScale * 1.08,
+        characterScale * 1.08,
+        characterScale * 1.08
     );
 
     window.setTimeout(
         () => {
-            if (character) {
-                character.setLocalScale(
-                    1,
-                    1,
-                    1
-                );
+            if (!character) {
+                return;
             }
+
+            character.setLocalScale(
+                characterScale,
+                characterScale,
+                characterScale
+            );
         },
         160
     );
@@ -599,7 +629,22 @@ function handlePointerUp(event) {
 
 canvas.addEventListener(
     "pointerup",
-    handlePointerUp,
+    (event) => {
+        if (
+            event.pointerType !== "touch"
+        ) {
+            return;
+        }
+
+        if (
+            characterHit(
+                event.clientX,
+                event.clientY
+            )
+        ) {
+            characterReaction();
+        }
+    },
     {
         passive: true
     }
@@ -664,6 +709,7 @@ try {
         "START",
         error
     );
+
     throw error;
 }
 
